@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administrar Inventario - Star Trek LCARS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@1,700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --lcars-orange: #ff9900;
+            --lcars-purple: #cc99cc;
+            --lcars-blue: #99ccff;
+            --lcars-green: #66cc99;
+            --lcars-red: #cc6666;
+            --lcars-yellow: #ffcc66;
+            --dark-bg: #111116;
+        }
+        body { font-family: Arial, sans-serif; background-color: var(--dark-bg); color: #ffffff; margin: 0; padding: 20px; }
+        
+        /* ESTILOS DE LOGIN */
+        .auth-container { max-width: 400px; margin: 50px auto; background-color: #1a1a24; padding: 30px; border-radius: 10px; border-left: 8px solid var(--lcars-orange); text-align: center; }
+        .auth-container h2 { color: var(--lcars-orange); margin-top: 0; }
+        .auth-container input { width: 100%; padding: 10px; margin-bottom: 15px; background: #000; border: 2px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; }
+        .auth-container input:focus { border-color: var(--lcars-orange); outline: none; }
+        .auth-toggle { color: var(--lcars-blue); font-size: 13px; margin-top: 15px; cursor: pointer; text-decoration: underline; }
+        .hidden { display: none !important; }
+
+        /* RESTO DEL CSS ORIGINAL */
+        .top-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto 20px auto; padding-bottom: 15px; border-bottom: 3px solid var(--lcars-orange); gap: 15px; }
+        h1 { color: var(--lcars-orange); margin: 0; font-weight: 300; letter-spacing: 2px; font-size: 26px; }
+        .links-bar { display: flex; gap: 10px; }
+        .back-link, .logout-btn { background-color: var(--lcars-blue); color: #000; text-decoration: none; padding: 8px 16px; border-radius: 12px; font-weight: bold; font-size: 13px; text-transform: uppercase; border: none; cursor: pointer; }
+        .logout-btn { background-color: var(--lcars-red); color: #fff; }
+        .back-link:hover, .logout-btn:hover { filter: brightness(1.15); }
+        
+        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1400px; margin: 0 auto; }
+        .panel { background-color: #1a1a24; padding: 20px; border-radius: 10px; border-left: 8px solid var(--lcars-blue); }
+        .panel.editing { border-left: 8px solid var(--lcars-yellow); }
+        .panel h2 { color: var(--lcars-orange); margin-top: 0; font-size: 18px; }
+        .panel.editing h2 { color: var(--lcars-yellow); }
+        label { display: block; font-size: 12px; color: var(--lcars-blue); text-transform: uppercase; margin: 10px 0 4px 0; }
+        input[type="text"], textarea { width: 100%; padding: 8px; box-sizing: border-box; background-color: #000; border: 2px solid #333; color: #fff; border-radius: 5px; font-size: 14px; }
+        input[type="text"]:focus, textarea:focus { border-color: var(--lcars-orange); outline: none; }
+        input[readonly] { background-color: #1a1a1a; color: #888; cursor: not-allowed; }
+        textarea { resize: vertical; min-height: 60px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; text-transform: uppercase; cursor: pointer; font-size: 13px; margin-top: 15px; width: 100%; }
+        .btn-add { background-color: var(--lcars-green); color: #000; }
+        .btn-save { background-color: var(--lcars-yellow); color: #000; }
+        .btn-del { background-color: var(--lcars-red); color: #fff; padding: 6px 12px; width: auto; margin: 0; font-size: 11px; }
+        .btn-edit { background-color: var(--lcars-blue); color: #000; padding: 6px 12px; width: auto; margin: 0; font-size: 11px; }
+        .btn-clear { background-color: var(--lcars-purple); color: #000; }
+        .btn-cancel { background-color: #555; color: #fff; display: none; }
+        .btn-cancel.visible { display: block; }
+        .btn:hover { filter: brightness(1.15); }
+
+        .item-list { list-style: none; padding: 0; margin: 0; max-height: 60vh; overflow-y: auto; }
+        .item-list li { background-color: #252535; padding: 12px; margin-bottom: 8px; border-radius: 4px; border-right: 4px solid var(--lcars-purple); display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; }
+        .item-list li.editing-item { border-right-color: var(--lcars-yellow); background-color: #2d2d20; }
+        .item-info { flex: 1; }
+        .item-info small { color: #aaa; display: block; font-size: 11px; margin-top: 3px; }
+        .item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .empty-msg { color: #888; text-align: center; padding: 20px; }
+        .msg { padding: 10px; border-radius: 5px; margin-bottom: 15px; display: none; font-size: 13px; }
+        .msg.ok { background: #1e3d2e; color: #66cc99; display: block; }
+        .msg.err { background: #3d1e1e; color: #cc6666; display: block; }
+        .msg.info { background: #2d2d1e; color: #ffcc66; display: block; }
+
+        .backup-panel { background-color: #13131b; border-left: 8px solid var(--lcars-purple); border-radius: 10px; padding: 20px; max-width: 1400px; margin: 20px auto 0 auto; }
+        .backup-panel h2 { color: var(--lcars-purple); margin-top: 0; font-size: 18px; }
+        .backup-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+        .backup-actions .btn { margin-top: 0; }
+        .btn-export { background-color: var(--lcars-green); color: #000; }
+        .btn-import { background-color: var(--lcars-orange); color: #000; }
+        .btn-template { background-color: var(--lcars-blue); color: #000; }
+        .btn-danger { background-color: var(--lcars-red); color: #fff; }
+        .backup-hint { font-size: 12px; color: #888; margin-top: 12px; line-height: 1.5; }
+        .import-options { display: none; background-color: #222230; border: 1px solid #444; border-radius: 6px; padding: 12px; margin-top: 12px; }
+        .import-options.visible { display: block; }
+        .import-options p { margin: 0 0 10px 0; font-size: 13px; color: var(--lcars-blue); }
+        .import-options .option-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .import-options .btn { margin-top: 0; }
+        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } .import-options .option-buttons { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<!-- PANTALLA DE LOGIN / REGISTRO -->
+<div id="authScreen" class="auth-container hidden">
+    <h1 style="font-size: 20px; margin-bottom: 20px;">STAR TREK INVENTORY</h1>
+    <h2 id="authTitle">Iniciar Sesión</h2>
+    <div id="authMsg" class="msg"></div>
+    <form id="authForm">
+        <input type="email" id="authEmail" placeholder="tu@correo.com" required>
+        <input type="password" id="authPassword" placeholder="Contraseña (mín. 6 caracteres)" required minlength="6">
+        <button type="submit" id="btnAuthSubmit" class="btn btn-add">Entrar</button>
+    </form>
+    <div class="auth-toggle" id="authToggle">¿No tienes cuenta? Regístrate aquí</div>
+</div>
+
+<!-- CONTENIDO PRINCIPAL (OCULTO HASTA LOGIN) -->
+<div id="mainApp" class="hidden">
+    <div class="top-bar">
+        <h1>ADMINISTRAR COLECCIÓN</h1>
+        <div class="links-bar">
+            <a href="index9.html" class="back-link">← Volver al Inventario</a>
+            <button id="btnLogout" class="logout-btn">Cerrar Sesión</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="panel" id="formPanel">
+            <h2 id="formTitle">Agregar Nuevo Artículo</h2>
+            <div id="message" class="msg"></div>
+            <form id="addForm">
+                <div class="form-row">
+                    <div><label>ID Inventario *</label><input type="text" id="f-id" required placeholder="ST-003"></div>
+                    <div><label>Nombre *</label><input type="text" id="f-nombre" required placeholder="Nombre del artículo"></div>
+                </div>
+                <div class="form-row">
+                    <div><label>Código de Barras</label><input type="text" id="f-codigoBarras"></div>
+                    <div><label>Marca</label><input type="text" id="f-marca"></div>
+                </div>
+                <div class="form-row">
+                    <div><label>Versión</label><input type="text" id="f-version"></div>
+                    <div><label>Año</label><input type="text" id="f-anio"></div>
+                </div>
+                <div class="form-row">
+                    <div><label>Asst. No.</label><input type="text" id="f-asstNo"></div>
+                    <div><label>Stock No.</label><input type="text" id="f-stockNo"></div>
+                </div>
+                <div class="form-row">
+                    <div><label>Collector Number</label><input type="text" id="f-collectorNumber"></div>
+                    <div><label>Almacenado en</label><input type="text" id="f-almacenado"></div>
+                </div>
+                <label>Descripción</label><textarea id="f-descripcion"></textarea>
+                <label>Comentarios</label><textarea id="f-comentario"></textarea>
+                <label>Foto Oficial (ruta)</label><input type="text" id="f-fotoOficial" placeholder="imagenes/...">
+                <label>Mi Colección 1 (ruta)</label><input type="text" id="f-fotoColeccion1" placeholder="imagenes/...">
+                <label>Mi Colección 2 (ruta)</label><input type="text" id="f-fotoColeccion2" placeholder="imagenes/...">
+                <button type="submit" id="btnSubmit" class="btn btn-add">Agregar Artículo</button>
+                <button type="button" id="btnCancel" class="btn btn-cancel">Cancelar Edición</button>
+                <button type="reset" id="btnClear" class="btn btn-clear">Limpiar Formulario</button>
+            </form>
+        </div>
+
+        <div class="panel">
+            <h2>Artículos Actuales (<span id="count">0</span>)</h2>
+            <ul id="itemList" class="item-list"></ul>
+        </div>
+    </div>
+
+    <div class="backup-panel">
+        <h2>Respaldo de Datos (JSON)</h2>
+        <div id="backupMsg" class="msg" style="margin-bottom:12px;"></div>
+        <div class="backup-actions">
+            <button type="button" id="btnExport" class="btn btn-export">⬇ Exportar inventario (JSON)</button>
+            <button type="button" id="btnImport" class="btn btn-import">⬆ Importar desde JSON</button>
+            <button type="button" id="btnTemplate" class="btn btn-template">📄 Descargar plantilla vacía</button>
+            <button type="button" id="btnWipe" class="btn btn-danger">🗑 Borrar todo el inventario</button>
+        </div>
+        <input type="file" id="fileInput" accept=".json,application/json" style="display:none;">
+        <div id="importOptions" class="import-options">
+            <p>¿Cómo quieres aplicar el archivo importado?</p>
+            <div class="option-buttons">
+                <button type="button" id="btnImportReplace" class="btn btn-danger">Reemplazar todo</button>
+                <button type="button" id="btnImportMerge" class="btn btn-add">Fusionar (evitar duplicados por ID)</button>
+            </div>
+            <button type="button" id="btnImportCancel" class="btn btn-clear" style="margin-top:10px;">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ============================================================
+// ⚠️ CONFIGURA AQUÍ TUS CREDENCIALES DE SUPABASE
+// ============================================================
+const SUPABASE_URL = "https://zsrlswjbzmdmvinmdybw.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpzcmxzd2piem1kbXZpbm1keWJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUyMjYxNDEsImV4cCI6MjExMDgwMjE0MX0.0URMqcAx71hZ4TT02X3T753s_sFn9RkuRt6-UCVw6WE";
+// ============================================================
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { storage: window.localStorage, persistSession: true }
+});
+
+const DEFAULT_ITEM_SHAPE = { id: "", nombre: "", codigoBarras: "", marca: "", version: "", anio: "", asstNo: "", stockNo: "", collectorNumber: "", almacenado: "", descripcion: "", comentario: "", fotoOficial: "", fotoColeccion1: "", fotoColeccion2: "" };
+let editingId = null;
+let inventoryCache = [];
+
+// ---------- LÓGICA DE AUTENTICACIÓN ----------
+let isSignUp = false;
+const authScreen = document.getElementById("authScreen");
+const mainApp = document.getElementById("mainApp");
+const authForm = document.getElementById("authForm");
+const authTitle = document.getElementById("authTitle");
+const authToggle = document.getElementById("authToggle");
+const btnAuthSubmit = document.getElementById("btnAuthSubmit");
+const authMsg = document.getElementById("authMsg");
+
+authToggle.addEventListener("click", () => {
+    isSignUp = !isSignUp;
+    authTitle.textContent = isSignUp ? "Crear Cuenta" : "Iniciar Sesión";
+    btnAuthSubmit.textContent = isSignUp ? "Registrarse" : "Entrar";
+    authToggle.textContent = isSignUp ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate aquí";
+    authMsg.className = "msg";
+});
+
+authForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("authEmail").value;
+    const password = document.getElementById("authPassword").value;
+    
+    btnAuthSubmit.textContent = "Cargando...";
+    btnAuthSubmit.disabled = true;
+    authMsg.className = "msg";
+
+    try {
+        let result;
+        if (isSignUp) {
+            result = await supabaseClient.auth.signUp({ email, password });
+        } else {
+            result = await supabaseClient.auth.signInWithPassword({ email, password });
+        }
+
+        if (result.error) throw result.error;
+
+        if (isSignUp && !result.data.session) {
+            authMsg.textContent = "Registro exitoso. Revisa tu correo para confirmar la cuenta.";
+            authMsg.className = "msg ok";
+        } else {
+            window.location.reload();
+        }
+    } catch (err) {
+        authMsg.textContent = "Error: " + err.message;
+        authMsg.className = "msg err";
+    } finally {
+        btnAuthSubmit.textContent = isSignUp ? "Registrarse" : "Entrar";
+        btnAuthSubmit.disabled = false;
+    }
+});
+
+document.getElementById("btnLogout").addEventListener("click", async () => {
+    await supabaseClient.auth.signOut();
+    window.location.reload();
+});
+
+async function checkSession() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+        authScreen.classList.add("hidden");
+        mainApp.classList.remove("hidden");
+        await refreshAll();
+    } else {
+        authScreen.classList.remove("hidden");
+        mainApp.classList.add("hidden");
+    }
+}
+
+// ---------- CONVERSIÓN Y CRUD ----------
+function rowToItem(row) {
+    return { id: row.item_id, nombre: row.nombre, codigoBarras: row.codigo_barras || "", marca: row.marca || "", version: row.version || "", anio: row.anio || "", asstNo: row.asst_no || "", stockNo: row.stock_no || "", collectorNumber: row.collector_number || "", almacenado: row.almacenado || "", descripcion: row.descripcion || "", comentario: row.comentario || "", fotoOficial: row.foto_oficial || "", fotoColeccion1: row.foto_coleccion1 || "", fotoColeccion2: row.foto_coleccion2 || "" };
+}
+function itemToRow(item, userId) {
+    return { user_id: userId, item_id: item.id, nombre: item.nombre, codigo_barras: item.codigoBarras || null, marca: item.marca || null, version: item.version || null, anio: item.anio || null, asst_no: item.asstNo || null, stock_no: item.stockNo || null, collector_number: item.collectorNumber || null, almacenado: item.almacenado || null, descripcion: item.descripcion || null, comentario: item.comentario || null, foto_oficial: item.fotoOficial || null, foto_coleccion1: item.fotoColeccion1 || null, foto_coleccion2: item.fotoColeccion2 || null };
+}
+
+async function loadInventory() {
+    const { data, error } = await supabaseClient.from('inventories').select('*').order('created_at', { ascending: true });
+    if (error) { console.error(error); return []; }
+    inventoryCache = data.map(rowToItem);
+    return inventoryCache;
+}
+async function agregarItem(data) {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) throw new Error("No hay usuario autenticado");
+    const { error } = await supabaseClient.from('inventories').insert(itemToRow(data, user.id));
+    if (error) throw error;
+}
+async function actualizarItem(itemId, data) {
+    const { error } = await supabaseClient.from('inventories').update({ nombre: data.nombre, codigo_barras: data.codigoBarras || null, marca: data.marca || null, version: data.version || null, anio: data.anio || null, asst_no: data.asstNo || null, stock_no: data.stockNo || null, collector_number: data.collectorNumber || null, almacenado: data.almacenado || null, descripcion: data.descripcion || null, comentario: data.comentario || null, foto_oficial: data.fotoOficial || null, foto_coleccion1: data.fotoColeccion1 || null, foto_coleccion2: data.fotoColeccion2 || null, updated_at: new Date().toISOString() }).eq('item_id', itemId);
+    if (error) throw error;
+}
+async function eliminarItem(itemId) {
+    const { error } = await supabaseClient.from('inventories').delete().eq('item_id', itemId);
+    if (error) throw error;
+}
+async function borrarTodo() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) throw new Error("No hay usuario autenticado");
+    const { error } = await supabaseClient.from('inventories').delete().eq('user_id', user.id);
+    if (error) throw error;
+}
+
+// ---------- UI HELPERS ----------
+function showMsg(text, type) { const m = document.getElementById("message"); m.textContent = text; m.className = "msg " + type; setTimeout(() => { m.className = "msg"; }, 3500); }
+function showBackupMsg(text, type) { const m = document.getElementById("backupMsg"); m.textContent = text; m.className = "msg " + type; setTimeout(() => { m.className = "msg"; }, 4500); }
+function getFieldIds() { return ["id","nombre","codigoBarras","marca","version","anio","asstNo","stockNo","collectorNumber","almacenado","descripcion","comentario","fotoOficial","fotoColeccion1","fotoColeccion2"]; }
+function clearForm() { getFieldIds().forEach(f => { document.getElementById("f-" + f).value = ""; }); }
+function fillForm(item) { getFieldIds().forEach(f => { document.getElementById("f-" + f).value = item[f] || ""; }); }
+function readForm() { const obj = {}; getFieldIds().forEach(f => { obj[f] = document.getElementById("f-" + f).value.trim(); }); return obj; }
+
+// ---------- MODO EDICIÓN ----------
+function enterEditMode(id) {
+    const item = inventoryCache.find(it => it.id === id);
+    if (!item) return;
+    editingId = id; fillForm(item);
+    document.getElementById("f-id").setAttribute("readonly", "readonly");
+    document.getElementById("formTitle").textContent = "Editando: " + (item.nombre || id);
+    document.getElementById("formPanel").classList.add("editing");
+    document.getElementById("btnSubmit").textContent = "Guardar Cambios";
+    document.getElementById("btnSubmit").className = "btn btn-save";
+    document.getElementById("btnCancel").classList.add("visible");
+    renderList(); window.scrollTo({ top: 0, behavior: "smooth" });
+    showMsg("Editando \"" + (item.nombre || id) + "\". Modifica los campos y guarda.", "info");
+}
+function exitEditMode() {
+    editingId = null; clearForm();
+    document.getElementById("f-id").removeAttribute("readonly");
+    document.getElementById("formTitle").textContent = "Agregar Nuevo Artículo";
+    document.getElementById("formPanel").classList.remove("editing");
+    document.getElementById("btnSubmit").textContent = "Agregar Artículo";
+    document.getElementById("btnSubmit").className = "btn btn-add";
+    document.getElementById("btnCancel").classList.remove("visible");
+}
+
+// ---------- LISTA ----------
+function renderList() {
+    const items = inventoryCache; const list = document.getElementById("itemList");
+    document.getElementById("count").textContent = items.length; list.innerHTML = "";
+    if (items.length === 0) {
+        const li = document.createElement("li"); li.className = "empty-msg"; li.textContent = "No hay artículos. Agrega uno con el formulario."; list.appendChild(li); return;
+    }
+    items.forEach(function(item) {
+        const li = document.createElement("li");
+        if (item.id === editingId) li.classList.add("editing-item");
+        const info = document.createElement("div"); info.className = "item-info";
+        info.innerHTML = "<strong>" + (item.nombre || "Sin nombre") + "</strong><small>[" + (item.id || "S/N") + "] " + (item.marca || "") + " " + (item.anio || "") + "</small>";
+        const actions = document.createElement("div"); actions.className = "item-actions";
+        const btnEdit = document.createElement("button"); btnEdit.className = "btn btn-edit"; btnEdit.textContent = "Editar";
+        btnEdit.addEventListener("click", function() { enterEditMode(item.id); });
+        const btnDel = document.createElement("button"); btnDel.className = "btn btn-del"; btnDel.textContent = "Eliminar";
+        btnDel.addEventListener("click", async function() {
+            if (confirm("¿Eliminar \"" + (item.nombre || "este artículo") + "\"?")) {
+                try { await eliminarItem(item.id); await refreshAll(); if (editingId === item.id) exitEditMode(); showMsg("Artículo eliminado.", "ok"); } 
+                catch (err) { showMsg("Error al eliminar: " + err.message, "err"); }
+            }
+        });
+        actions.appendChild(btnEdit); actions.appendChild(btnDel); li.appendChild(info); li.appendChild(actions); list.appendChild(li);
+    });
+}
+async function refreshAll() { await loadInventory(); renderList(); }
+
+// ---------- FORMULARIO ----------
+document.getElementById("addForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const data = readForm();
+    if (!data.id || !data.nombre) { showMsg("El ID y el Nombre son obligatorios.", "err"); return; }
+    try {
+        if (editingId === null) {
+            if (inventoryCache.some(it => it.id === data.id)) { showMsg("Ya existe un artículo con el ID \"" + data.id + "\".", "err"); return; }
+            await agregarItem(data); clearForm(); await refreshAll(); showMsg("Artículo \"" + data.nombre + "\" agregado.", "ok");
+        } else {
+            await actualizarItem(editingId, data); const nombre = data.nombre; exitEditMode(); await refreshAll(); showMsg("Artículo \"" + nombre + "\" actualizado.", "ok");
+        }
+    } catch (err) { showMsg("Error: " + err.message, "err"); }
+});
+document.getElementById("btnCancel").addEventListener("click", function() { exitEditMode(); renderList(); showMsg("Edición cancelada.", "info"); });
+document.getElementById("btnClear").addEventListener("click", function() { if (editingId !== null) { exitEditMode(); renderList(); showMsg("Edición cancelada.", "info"); } });
+
+// ---------- EXPORTAR ----------
+function descargarJSON(data, nombreArchivo) {
+    const json = JSON.stringify(data, null, 2); const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = nombreArchivo;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+document.getElementById("btnExport").addEventListener("click", async function() {
+    const items = await loadInventory();
+    if (items.length === 0) { showBackupMsg("No hay artículos para exportar.", "err"); return; }
+    const fecha = new Date().toISOString().slice(0, 10); descargarJSON(items, "inventario_startrek_" + fecha + ".json"); showBackupMsg("Exportados " + items.length + " artículos a JSON.", "ok");
+});
+document.getElementById("btnTemplate").addEventListener("click", function() { descargarJSON([DEFAULT_ITEM_SHAPE], "plantilla_inventario_startrek.json"); showBackupMsg("Plantilla vacía descargada.", "ok"); });
+
+// ---------- IMPORTAR (VERSIÓN MASIVA Y A PRUEBA DE FALLOS) ----------
+// ---------- IMPORTAR (VERSIÓN MASIVA CON FILTRO DE DUPLICADOS) ----------
+let pendingImportData = null;
+
+document.getElementById("btnImport").addEventListener("click", function() { 
+    document.getElementById("fileInput").click(); 
+});
+
+document.getElementById("fileInput").addEventListener("change", function(e) {
+    const file = e.target.files[0]; 
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        try {
+            const parsed = JSON.parse(ev.target.result);
+            if (!Array.isArray(parsed) || !parsed.every(it => it && typeof it === "object")) { 
+                showBackupMsg("El archivo no contiene un array válido.", "err"); 
+                return; 
+            }
+            pendingImportData = parsed; 
+            document.getElementById("importOptions").classList.add("visible"); 
+            showBackupMsg("Archivo cargado: " + parsed.length + " artículo(s). Elige cómo importar.", "info");
+        } catch (err) { 
+            showBackupMsg("Error al leer el JSON: " + err.message, "err"); 
+        }
+    };
+    reader.readAsText(file); 
+    e.target.value = "";
+});
+
+// REEMPLAZAR TODO
+document.getElementById("btnImportReplace").addEventListener("click", async function() {
+    if (!pendingImportData) return;
+    if (!confirm("Esto REEMPLAZARÁ todo el inventario actual (" + inventoryCache.length + " artículos) por " + pendingImportData.length + " del archivo. ¿Continuar?")) return;
+    
+    showBackupMsg("Importando y reemplazando, por favor espera...", "info");
+    try {
+        await borrarTodo(); // Borra lo actual
+        
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) throw new Error("No hay usuario autenticado");
+
+        // FILTRO DE DUPLICADOS: Usamos un Set para quedarnos solo con la primera aparición de cada ID
+        const uniqueItems = [];
+        const seenIds = new Set();
+        let duplicadosIgnorados = 0;
+
+        pendingImportData.forEach(it => {
+            if (!it.id) {
+                // Si no tiene ID, lo ignoramos o le generamos uno
+                return; 
+            }
+            if (seenIds.has(it.id)) {
+                duplicadosIgnorados++;
+            } else {
+                seenIds.add(it.id);
+                uniqueItems.push(it);
+            }
+        });
+
+        // Insertar EN BLOQUE los artículos únicos
+        const rowsToInsert = uniqueItems.map(it => itemToRow(Object.assign({}, DEFAULT_ITEM_SHAPE, it), user.id));
+        const { error } = await supabaseClient.from('inventories').insert(rowsToInsert);
+        
+        if (error) throw error;
+
+        const n = uniqueItems.length; 
+        pendingImportData = null;
+        document.getElementById("importOptions").classList.remove("visible"); 
+        exitEditMode(); 
+        await refreshAll(); 
+        
+        let msg = "Éxito: Se importaron " + n + " artículos (reemplazo completo).";
+        if (duplicadosIgnorados > 0) {
+            msg += " Se ignoraron " + duplicadosIgnorados + " artículos con ID duplicado en el archivo.";
+        }
+        showBackupMsg(msg, "ok");
+    } catch (err) {
+        showBackupMsg("Error al importar: " + err.message, "err"); 
+        await refreshAll();
+    }
+});
+
+// FUSIONAR (Evitando duplicados)
+document.getElementById("btnImportMerge").addEventListener("click", async function() {
+    if (!pendingImportData) return;
+    showBackupMsg("Fusionando datos, por favor espera...", "info");
+    let agregados = 0, actualizados = 0, errores = 0, duplicadosIgnorados = 0;
+    
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) throw new Error("No hay usuario autenticado");
+        
+        // FILTRO DE DUPLICADOS EN EL ARCHIVO
+        const uniqueItems = [];
+        const seenIds = new Set();
+
+        pendingImportData.forEach(it => {
+            if (!it.id) return;
+            if (seenIds.has(it.id)) {
+                duplicadosIgnorados++;
+            } else {
+                seenIds.add(it.id);
+                uniqueItems.push(it);
+            }
+        });
+
+        const rows = uniqueItems.map(it => itemToRow(Object.assign({}, DEFAULT_ITEM_SHAPE, it), user.id));
+
+        // Intentar un UPSERT masivo (Insertar o Actualizar si ya existe)
+        const { error } = await supabaseClient
+            .from('inventories')
+            .upsert(rows, { onConflict: 'user_id, item_id', ignoreDuplicates: false });
+        
+        if (error) {
+            // Si falla el masivo (por ejemplo, por IDs duplicados dentro del mismo archivo),
+            // hacemos un bucle controlado que NO se detiene si uno falla.
+            console.warn("Fallo el UPSERT masivo, usando modo iterativo controlado...");
+            
+            for (const row of rows) {
+                try {
+                    const { error: insError } = await supabaseClient.from('inventories').insert(row);
+                    if (insError) {
+                        const { error: updError } = await supabaseClient
+                            .from('inventories')
+                            .update(row)
+                            .eq('user_id', user.id)
+                            .eq('item_id', row.item_id);
+                            
+                        if (updError) {
+                            errores++;
+                        } else {
+                            actualizados++;
+                        }
+                    } else {
+                        agregados++;
+                    }
+                } catch (innerErr) {
+                    errores++;
+                }
+            }
+        } else {
+            agregados = rows.length; 
+        }
+
+        const total = uniqueItems.length; 
+        pendingImportData = null;
+        document.getElementById("importOptions").classList.remove("visible"); 
+        await refreshAll();
+        
+        let msg = "Fusión exitosa: " + total + " artículos procesados (" + agregados + " nuevos/actualizados).";
+        if (duplicadosIgnorados > 0) {
+            msg += " Se ignoraron " + duplicadosIgnorados + " por tener ID duplicado en el archivo.";
+        }
+        if (errores > 0) {
+            msg += " Hubo " + errores + " errores inesperados.";
+            showBackupMsg(msg, "err");
+        } else {
+            showBackupMsg(msg, "ok");
+        }
+    } catch (err) {
+        showBackupMsg("Error crítico al fusionar: " + err.message, "err"); 
+        await refreshAll();
+    }
+});
+
+document.getElementById("btnImportCancel").addEventListener("click", function() { 
+    pendingImportData = null; 
+    document.getElementById("importOptions").classList.remove("visible"); 
+    showBackupMsg("Importación cancelada.", "info"); 
+});
+
+// ---------- BORRAR TODO (MANTENIDO INTACTO) ----------
+document.getElementById("btnWipe").addEventListener("click", async function() {
+    const n = inventoryCache.length;
+    if (n === 0) { showBackupMsg("No hay artículos para borrar.", "err"); return; }
+    if (!confirm("Esto BORRARÁ TODOS los " + n + " artículos. ¿Estás seguro?")) return;
+    if (!confirm("Última confirmación: ¿borrar todo definitivamente?")) return;
+    try { await borrarTodo(); exitEditMode(); await refreshAll(); showBackupMsg("Inventario borrado.", "ok"); } 
+    catch (err) { showBackupMsg("Error al borrar: " + err.message, "err"); }
+});
+
+// INICIALIZACIÓN
+checkSession();
+</script>
+</body>
+</html>

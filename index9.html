@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@1,700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario Star Trek LCARS</title>
+    <style>
+        :root { --lcars-orange: #ff9900; --lcars-purple: #cc99cc; --lcars-blue: #99ccff; --lcars-green: #66cc99; --lcars-red: #cc6666; --dark-bg: #111116; }
+        body { font-family: Arial, sans-serif; background-color: var(--dark-bg); color: #ffffff; margin: 0; padding: 20px; }
+        
+        .auth-container { max-width: 400px; margin: 50px auto; background-color: #1a1a24; padding: 30px; border-radius: 10px; border-left: 8px solid var(--lcars-orange); text-align: center; }
+        .auth-container h2 { color: var(--lcars-orange); margin-top: 0; }
+        .auth-container input { width: 100%; padding: 10px; margin-bottom: 15px; background: #000; border: 2px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; }
+        .auth-container input:focus { border-color: var(--lcars-orange); outline: none; }
+        .auth-toggle { color: var(--lcars-blue); font-size: 13px; margin-top: 15px; cursor: pointer; text-decoration: underline; }
+        .hidden { display: none !important; }
+
+        .top-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto 20px auto; padding-bottom: 15px; border-bottom: 3px solid var(--lcars-orange); gap: 15px; }
+        h1 { color: var(--lcars-orange); margin: 0; font-weight: 300; letter-spacing: 2px; font-size: 26px; }
+        .links-bar { display: flex; gap: 10px; align-items: center; }
+        .admin-link, .logout-btn { background-color: var(--lcars-green); color: #000000; text-decoration: none; padding: 8px 16px; border-radius: 12px; font-weight: bold; font-size: 13px; text-transform: uppercase; border: none; cursor: pointer; white-space: nowrap; }
+        .logout-btn { background-color: var(--lcars-red); color: #fff; }
+        .admin-link:hover, .logout-btn:hover { filter: brightness(1.15); }
+        
+        .audio-panel { display: flex; align-items: center; gap: 12px; background-color: #1a1a24; padding: 8px 16px; border-radius: 20px; border-left: 8px solid var(--lcars-purple); border-right: 8px solid var(--lcars-blue); }
+        .btn-audio { background-color: var(--lcars-purple); color: #000000; border: none; border-radius: 12px; padding: 6px 14px; font-weight: bold; font-size: 13px; cursor: pointer; text-transform: uppercase; transition: background 0.2s; min-width: 135px; }
+        .btn-audio:hover { filter: brightness(1.15); } .btn-audio.playing { background-color: var(--lcars-green); }
+        .volume-control { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--lcars-blue); text-transform: uppercase; }
+        input[type="range"] { accent-color: var(--lcars-orange); cursor: pointer; width: 100px; }
+
+        .container { display: grid; grid-template-columns: 320px 1fr; gap: 20px; max-width: 1400px; margin: 0 auto; }
+        .search-panel { background-color: #1a1a24; padding: 15px; border-radius: 10px; border-left: 8px solid var(--lcars-orange); }
+        .search-box { width: 100%; padding: 10px; box-sizing: border-box; background-color: #000000; border: 2px solid var(--lcars-blue); color: #ffffff; border-radius: 5px; font-size: 15px; margin-bottom: 10px; }
+        .btn-all { width: 100%; padding: 8px; background-color: var(--lcars-orange); color: #000000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-bottom: 15px; text-transform: uppercase; }
+        .btn-all:hover { background-color: #ffb84d; }
+        .results-list { list-style: none; padding: 0; margin: 0; max-height: 70vh; overflow-y: auto; }
+        .results-list li { padding: 10px; background-color: #252535; margin-bottom: 8px; border-radius: 4px; cursor: pointer; border-right: 4px solid var(--lcars-purple); font-size: 14px; }
+        .results-list li:hover { background-color: #35354d; }
+
+        .detail-panel { background-color: #1a1a24; padding: 25px; border-radius: 10px; border-left: 8px solid var(--lcars-blue); min-height: 75vh; }
+        .item-header { border-bottom: 2px solid var(--lcars-purple); padding-bottom: 10px; margin-bottom: 20px; }
+        .item-header h2 { margin: 0; color: var(--lcars-orange); }
+        .meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; background-color: #13131b; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid var(--lcars-orange); }
+        .meta-item { font-size: 13px; color: #aaaaaa; }
+        .meta-item span { color: var(--lcars-blue); font-weight: bold; display: block; margin-top: 3px; font-size: 15px; }
+        .description { font-size: 16px; line-height: 1.5; margin-bottom: 20px; }
+        .comment-box { background-color: #222230; border-left: 4px solid var(--lcars-purple); padding: 12px 15px; border-radius: 4px; margin-bottom: 25px; font-size: 15px; }
+        .comment-box strong { color: var(--lcars-purple); display: block; margin-bottom: 5px; font-size: 12px; text-transform: uppercase; }
+        .gallery-hint { font-size: 12px; color: #888888; margin-bottom: 10px; text-align: right; font-style: italic; }
+        .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+        .photo-card { background-color: #0a0a0f; border: 1px solid #333333; border-radius: 6px; padding: 10px; text-align: center; cursor: zoom-in; transition: border-color 0.2s; user-select: none; }
+        .photo-card:hover { border-color: var(--lcars-orange); }
+        .photo-card img { max-width: 100%; height: 200px; object-fit: contain; border-radius: 4px; background-color: #181820; transition: height 0.25s ease; }
+        .photo-card label { display: block; margin-top: 8px; font-size: 12px; color: var(--lcars-blue); text-transform: uppercase; }
+        .photo-card.expanded { grid-column: 1 / -1; border: 2px solid var(--lcars-orange); cursor: zoom-out; order: -1; }
+        .photo-card.expanded img { height: 550px; max-height: 75vh; }
+        .welcome-box { background-color: #1a1a24; padding: 40px; border-radius: 10px; text-align: center; color: #888888; }
+		
+		.results-list li.selected-keyboard {
+		background-color: #4a4a6a; /* Un tono azulado/grisáceo más claro */
+		border-right-color: var(--lcars-orange); /* El borde derecho cambia a naranja */
+		color: #ffffff;
+		}
+		
+		
+    </style>
+</head>
+<body>
+
+    <!-- PANTALLA DE LOGIN / REGISTRO -->
+    <div id="authScreen" class="auth-container hidden">
+        <h1 style="font-size: 20px; margin-bottom: 20px;">STAR TREK INVENTORY</h1>
+        <h2 id="authTitle">Iniciar Sesión</h2>
+        <div id="authMsg" class="msg" style="display:none; padding:10px; border-radius:5px; margin-bottom:15px;"></div>
+        <form id="authForm">
+            <input type="email" id="authEmail" placeholder="tu@correo.com" required>
+            <input type="password" id="authPassword" placeholder="Contraseña (mín. 6 caracteres)" required minlength="6">
+            <button type="submit" id="btnAuthSubmit" class="btn-all">Entrar</button>
+        </form>
+        <div class="auth-toggle" id="authToggle">¿No tienes cuenta? Regístrate aquí</div>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div id="mainApp" class="hidden">
+        <audio id="bgMusic" loop>
+            <source src="audio/ambiente_startrek.mp3" type="audio/mpeg">
+        </audio>
+
+        <div class="top-bar">
+            <h1>STAR TREK COLLECTIBLES</h1>
+            <div class="links-bar">
+                <a href="admin.html" class="admin-link">+ Administrar Colección</a>
+                <button id="btnLogout" class="logout-btn">Cerrar Sesión</button>
+            </div>
+            <div class="audio-panel">
+                <button type="button" id="btnToggleAudio" class="btn-audio">Audio: OFF</button>
+                <div class="volume-control">
+                    <label for="volumeSlider">Vol</label>
+                    <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0.3">
+                    <span id="volumePercent">30%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="search-panel">
+                <input type="text" id="searchInput" class="search-box" placeholder="Buscar nombre, ID, marca, código...">
+                <button type="button" id="btnShowAll" class="btn-all">Mostrar Todo el Inventario</button>
+                <ul id="resultsList" class="results-list"></ul>
+            </div>
+
+            <div>
+                <div id="welcomeMessage" class="welcome-box">
+                    <h3>Escribe en el buscador, escanea un código de barras o presiona "Mostrar Todo el Inventario".</h3>
+                </div>
+
+                <div id="detailPanel" class="detail-panel hidden">
+                    <div class="item-header"><h2 id="itemTitle"></h2></div>
+                    <div id="metaGrid" class="meta-grid">
+                        <div class="meta-item" id="wrap-id">ID Inventario <span id="val-id"></span></div>
+                        <div class="meta-item" id="wrap-codigoBarras">Código de Barras <span id="val-codigoBarras"></span></div>
+                        <div class="meta-item" id="wrap-marca">Marca <span id="val-marca"></span></div>
+                        <div class="meta-item" id="wrap-version">Versión <span id="val-version"></span></div>
+                        <div class="meta-item" id="wrap-anio">Año <span id="val-anio"></span></div>
+                        <div class="meta-item" id="wrap-asstNo">Asst. No. <span id="val-asstNo"></span></div>
+                        <div class="meta-item" id="wrap-stockNo">Stock No. <span id="val-stockNo"></span></div>
+                        <div class="meta-item" id="wrap-collectorNumber">Collector Number <span id="val-collectorNumber"></span></div>
+                        <div class="meta-item" id="wrap-almacenado">Almacenado en <span id="val-almacenado"></span></div>
+                    </div>
+                    <p id="itemDescription" class="description"></p>
+                    <div id="wrap-comentario" class="comment-box"><strong>Comentarios</strong><span id="val-comentario"></span></div>
+                    <div class="gallery-hint">Doble clic en una imagen para ampliar o reducir</div>
+                    <div class="gallery">
+                        <div class="photo-card" id="wrapperOficial"><img id="imgOfficial" src="" alt="Foto Oficial"><label>Foto Referencia</label></div>
+                        <div class="photo-card" id="wrapperColeccion1"><img id="imgColeccion1" src="" alt="Mi Colección 1"><label>Mi Colección (Anverso)</label></div>
+                        <div class="photo-card" id="wrapperColeccion2"><img id="imgColeccion2" src="" alt="Mi Colección 2"><label>Mi Colección (Reverso)</label></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+    // ============================================================
+    // ⚠️ CONFIGURA AQUÍ TUS CREDENCIALES DE SUPABASE
+    // ============================================================
+ const SUPABASE_URL = "https://zsrlswjbzmdmvinmdybw.supabase.co";
+ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpzcmxzd2piem1kbXZpbm1keWJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUyMjYxNDEsImV4cCI6MjExMDgwMjE0MX0.0URMqcAx71hZ4TT02X3T753s_sFn9RkuRt6-UCVw6WE";
+   // ============================================================
+
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { storage: window.localStorage, persistSession: true }
+    });
+
+    let inventario = [];
+
+    // ---------- LÓGICA DE AUTENTICACIÓN ----------
+    let isSignUp = false;
+    const authScreen = document.getElementById("authScreen");
+    const mainApp = document.getElementById("mainApp");
+    const authForm = document.getElementById("authForm");
+    const authTitle = document.getElementById("authTitle");
+    const authToggle = document.getElementById("authToggle");
+    const btnAuthSubmit = document.getElementById("btnAuthSubmit");
+    const authMsg = document.getElementById("authMsg");
+
+    authToggle.addEventListener("click", () => {
+        isSignUp = !isSignUp;
+        authTitle.textContent = isSignUp ? "Crear Cuenta" : "Iniciar Sesión";
+        btnAuthSubmit.textContent = isSignUp ? "Registrarse" : "Entrar";
+        authToggle.textContent = isSignUp ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate aquí";
+        authMsg.style.display = "none";
+    });
+
+    authForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("authEmail").value;
+        const password = document.getElementById("authPassword").value;
+        
+        btnAuthSubmit.textContent = "Cargando...";
+        btnAuthSubmit.disabled = true;
+        authMsg.style.display = "none";
+
+        try {
+            let result;
+            if (isSignUp) {
+                result = await supabaseClient.auth.signUp({ email, password });
+            } else {
+                result = await supabaseClient.auth.signInWithPassword({ email, password });
+            }
+
+            if (result.error) throw result.error;
+
+            if (isSignUp && !result.data.session) {
+                authMsg.textContent = "Registro exitoso. Revisa tu correo para confirmar la cuenta.";
+                authMsg.style.display = "block";
+                authMsg.style.backgroundColor = "#1e3d2e";
+                authMsg.style.color = "#66cc99";
+            } else {
+                window.location.reload();
+            }
+        } catch (err) {
+            authMsg.textContent = "Error: " + err.message;
+            authMsg.style.display = "block";
+            authMsg.style.backgroundColor = "#3d1e1e";
+            authMsg.style.color = "#cc6666";
+        } finally {
+            btnAuthSubmit.textContent = isSignUp ? "Registrarse" : "Entrar";
+            btnAuthSubmit.disabled = false;
+        }
+    });
+
+    document.getElementById("btnLogout").addEventListener("click", async () => {
+        await supabaseClient.auth.signOut();
+        window.location.reload();
+    });
+
+    async function checkSession() {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+            authScreen.classList.add("hidden");
+            mainApp.classList.remove("hidden");
+            await cargarInventario();
+            initAudioAndSearch(); // Inicializar el resto de la UI
+        } else {
+            authScreen.classList.remove("hidden");
+            mainApp.classList.add("hidden");
+        }
+    }
+
+    // ---------- LÓGICA DE INVENTARIO ----------
+    function rowToItem(row) {
+        return { id: row.item_id, nombre: row.nombre, codigoBarras: row.codigo_barras || "", marca: row.marca || "", version: row.version || "", anio: row.anio || "", asstNo: row.asst_no || "", stockNo: row.stock_no || "", collectorNumber: row.collector_number || "", almacenado: row.almacenado || "", descripcion: row.descripcion || "", comentario: row.comentario || "", fotoOficial: row.foto_oficial || "", fotoColeccion1: row.foto_coleccion1 || "", fotoColeccion2: row.foto_coleccion2 || "" };
+    }
+
+    async function cargarInventario() {
+        const { data, error } = await supabaseClient.from('inventories').select('*').order('created_at', { ascending: true });
+        if (error) { console.error(error); return; }
+        inventario = data.map(rowToItem);
+        if (window.renderizarLista) window.renderizarLista(inventario);
+    }
+
+    function initAudioAndSearch() {
+        const searchInput = document.getElementById("searchInput");
+        const btnShowAll = document.getElementById("btnShowAll");
+        const resultsList = document.getElementById("resultsList");
+        const detailPanel = document.getElementById("detailPanel");
+        const welcomeMessage = document.getElementById("welcomeMessage");
+        const photoCards = document.querySelectorAll(".photo-card");
+
+        const bgMusic = document.getElementById("bgMusic");
+        const btnToggleAudio = document.getElementById("btnToggleAudio");
+        const volumeSlider = document.getElementById("volumeSlider");
+        const volumePercent = document.getElementById("volumePercent");
+
+        bgMusic.volume = parseFloat(volumeSlider.value);
+
+        btnToggleAudio.addEventListener("click", function() {
+            if (bgMusic.paused) {
+                bgMusic.play().then(function() { btnToggleAudio.textContent = "Audio: ON"; btnToggleAudio.classList.add("playing"); }).catch(function() { alert("No se encontró el archivo de audio."); });
+            } else {
+                bgMusic.pause(); btnToggleAudio.textContent = "Audio: OFF"; btnToggleAudio.classList.remove("playing");
+            }
+        });
+        volumeSlider.addEventListener("input", function() {
+            const vol = parseFloat(volumeSlider.value); bgMusic.volume = vol; volumePercent.textContent = Math.round(vol * 100) + "%";
+        });
+
+        photoCards.forEach(function(card) {
+            card.addEventListener("dblclick", function() {
+                const estabaAmpliada = card.classList.contains("expanded");
+                photoCards.forEach(function(c) { c.classList.remove("expanded"); });
+                if (!estabaAmpliada) card.classList.add("expanded");
+            });
+        });
+
+        // --- LÓGICA DE NAVEGACIÓN CON TECLADO ---
+        let currentItems = [];
+        let currentIndex = -1;
+
+        window.renderizarLista = function(items) {
+            currentItems = items; // Guardamos los items actuales para el teclado
+            currentIndex = -1;    // Reiniciamos el índice
+            resultsList.innerHTML = "";
+            
+            if (items.length === 0) {
+                const li = document.createElement("li"); 
+                li.textContent = "No se encontraron coincidencias."; 
+                li.style.cursor = "default"; 
+                resultsList.appendChild(li); 
+                return;
+            }
+            
+            items.forEach(function(item, index) {
+                const li = document.createElement("li");
+                const anioTexto = item.anio ? " (" + item.anio + ")" : "";
+                li.textContent = "[" + (item.id || "S/N") + "] " + item.nombre + anioTexto;
+                
+                // Al hacer clic, actualizamos el índice para que el teclado sepa dónde está
+                li.addEventListener("click", function() { 
+                    currentIndex = index; 
+                    actualizarResaltado();
+                    mostrarDetalle(item); 
+                });
+                
+                resultsList.appendChild(li);
+            });
+        };
+
+        function actualizarResaltado() {
+            // Quitar resaltado de todos
+            const lis = resultsList.querySelectorAll("li");
+            lis.forEach(li => li.classList.remove("selected-keyboard"));
+            
+            // Agregar resaltado al actual y hacer scroll hacia él si es necesario
+            if (currentIndex >= 0 && lis[currentIndex]) {
+                lis[currentIndex].classList.add("selected-keyboard");
+                lis[currentIndex].scrollIntoView({ block: "nearest", behavior: "smooth" });
+            }
+        }
+
+        // Evento para escuchar las flechas del teclado
+        document.addEventListener("keydown", function(e) {
+            // Si la lista está vacía, no hacemos nada
+            if (currentItems.length === 0) return;
+
+            // Si el foco está en un input (como el buscador), y presionas flechas, 
+            // evitamos que el cursor del texto se mueva y controlamos la lista.
+            if (document.activeElement === searchInput || document.activeElement === document.body) {
+                
+                if (e.key === "ArrowDown") {
+                    e.preventDefault(); // Evita el scroll de la página
+                    if (currentIndex < currentItems.length - 1) {
+                        currentIndex++;
+                    } else {
+                        currentIndex = 0; // Volver al inicio si llega al final
+                    }
+                    actualizarResaltado();
+                    mostrarDetalle(currentItems[currentIndex]);
+                } 
+                else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    if (currentIndex > 0) {
+                        currentIndex--;
+                    } else {
+                        currentIndex = currentItems.length - 1; // Ir al final si está en el inicio
+                    }
+                    actualizarResaltado();
+                    mostrarDetalle(currentItems[currentIndex]);
+                }
+            }
+        });
+
+        // --- FIN LÓGICA DE NAVEGACIÓN ---
+
+        function buscar() {
+            const query = searchInput.value.toLowerCase().trim();
+            if (query === "") { resultsList.innerHTML = ""; return; }
+            
+            // 1. Separamos la búsqueda en palabras individuales
+            const palabras = query.split(/\s+/); 
+            
+            const coincidencias = inventario.filter(function(item) {
+                // 2. Creamos un solo bloque de texto con toda la info del artículo
+                const textoArticulo = [
+                    item.nombre, 
+                    item.id, 
+                    item.codigoBarras, 
+                    item.marca, 
+                    item.version, 
+                    item.anio, 
+                    item.asstNo, 
+                    item.stockNo, 
+                    item.collectorNumber, 
+                    item.almacenado,
+                    item.descripcion, // Añadimos la descripción por si buscas algo ahí
+                    item.comentario
+                ].filter(Boolean).join(" ").toLowerCase();
+                
+                // 3. Verificamos que TODAS las palabras de la búsqueda estén en el texto
+                // El método .every() devuelve true solo si todas las palabras cumplen la condición
+                return palabras.every(palabra => textoArticulo.includes(palabra));
+            });
+            
+            renderizarLista(coincidencias);
+        }
+
+        function actualizarCampo(wrapperId, valueId, valor) {
+            const wrapper = document.getElementById(wrapperId); const valElement = document.getElementById(valueId);
+            if (valor !== undefined && valor !== null && String(valor).trim() !== "") { wrapper.classList.remove("hidden"); valElement.textContent = valor; } 
+            else { wrapper.classList.add("hidden"); }
+        }
+        function gestionarImagen(wrapperId, imgId, ruta) {
+            const wrapper = document.getElementById(wrapperId); const imgElement = document.getElementById(imgId);
+            if (ruta !== undefined && ruta !== null && String(ruta).trim() !== "") { wrapper.classList.remove("hidden"); imgElement.src = ruta; } 
+            else { wrapper.classList.add("hidden"); }
+        }
+        function mostrarDetalle(item) {
+            welcomeMessage.classList.add("hidden"); detailPanel.classList.remove("hidden"); photoCards.forEach(function(c) { c.classList.remove("expanded"); });
+            document.getElementById("itemTitle").textContent = item.nombre || "Artículo sin nombre";
+            actualizarCampo("wrap-id", "val-id", item.id); actualizarCampo("wrap-codigoBarras", "val-codigoBarras", item.codigoBarras);
+            actualizarCampo("wrap-marca", "val-marca", item.marca); actualizarCampo("wrap-version", "val-version", item.version);
+            actualizarCampo("wrap-anio", "val-anio", item.anio); actualizarCampo("wrap-asstNo", "val-asstNo", item.asstNo);
+            actualizarCampo("wrap-stockNo", "val-stockNo", item.stockNo); actualizarCampo("wrap-collectorNumber", "val-collectorNumber", item.collectorNumber);
+            actualizarCampo("wrap-almacenado", "val-almacenado", item.almacenado);
+            const descEl = document.getElementById("itemDescription");
+            if (item.descripcion && String(item.descripcion).trim() !== "") { descEl.classList.remove("hidden"); descEl.textContent = item.descripcion; } 
+            else { descEl.classList.add("hidden"); }
+            actualizarCampo("wrap-comentario", "val-comentario", item.comentario);
+            gestionarImagen("wrapperOficial", "imgOfficial", item.fotoOficial);
+            gestionarImagen("wrapperColeccion1", "imgColeccion1", item.fotoColeccion1);
+            gestionarImagen("wrapperColeccion2", "imgColeccion2", item.fotoColeccion2);
+        }
+
+        searchInput.addEventListener("input", buscar);
+        btnShowAll.addEventListener("click", function() { searchInput.value = ""; renderizarLista(inventario); });
+    }
+
+
+    // INICIALIZACIÓN
+    checkSession();
+    </script>
+</body>
+</html>
